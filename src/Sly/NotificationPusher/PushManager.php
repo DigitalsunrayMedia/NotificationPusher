@@ -60,16 +60,17 @@ class PushManager extends PushCollection
      */
     public function push()
     {
+        $result = [];
+
         foreach ($this as $push) {
             $adapter = $push->getAdapter();
             $adapter->setEnvironment($this->getEnvironment());
-
-            if ($adapter->push($push)) {
-                $push->pushed();
-            }
+            $pushResult = $adapter->push($push);
+            $push->pushed();
+            $result[$push->getAdapter()->getAdapterKey()] = $pushResult;
         }
 
-        return $this;
+        return $result;
     }
 
     /**

@@ -68,6 +68,7 @@ class Apns extends BaseAdapter
         $client = $this->getOpenedServiceClient();
 
         $pushedDevices = new DeviceCollection();
+        $failedDevices = new DeviceCollection();
 
         foreach ($push->getDevices() as $device) {
             $message = $this->getServiceMessageFromOrigin($device, $push->getMessage());
@@ -78,12 +79,26 @@ class Apns extends BaseAdapter
                 throw new PushException($e->getMessage());
             }
 
-            if (ServiceResponse::RESULT_OK === $this->response->getCode()) {
+            $responseCode = $this->response->getCode();
+
+            if (ServiceResponse::RESULT_OK === $responseCode) {
                 $pushedDevices->add($device);
+            } else if (
+                ServiceResponse::RESULT_INVALID_TOKEN === $responseCode ||
+                ServiceResponse::RESULT_INVALID_TOKEN_SIZE === $responseCode
+            ) {
+                $failedDevices->add($device);
+                $client = $this->resetServiceClient();
+            } else {
+                $client = $this->resetServiceClient();
             }
+
         }
 
-        return $pushedDevices;
+        return [
+            'succeeded' => $pushedDevices,
+            'failed' => $failedDevices
+        ];
     }
 
     /**
@@ -130,6 +145,21 @@ class Apns extends BaseAdapter
     private function getOpenedServiceClient()
     {
         if (!isset($this->openedClient)) {
+            $this->openedClient = $this->getOpenedClient(new ServiceClient());
+        }
+
+        return $this->openedClient;
+    }
+
+    /**
+     * Resets the client to allow writing after an invalid token was provided to Apple.
+     *
+     * @return ServiceAbstractClient
+     */
+    private function resetServiceClient()
+    {
+        if (isset($this->openedClient)) {
+            $this->openedClient->close();
             $this->openedClient = $this->getOpenedClient(new ServiceClient());
         }
 

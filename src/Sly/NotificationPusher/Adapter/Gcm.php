@@ -61,6 +61,8 @@ class Gcm extends BaseAdapter
     {
         $client        = $this->getOpenedClient();
         $pushedDevices = new DeviceCollection();
+        $failedDevices = new DeviceCollection();
+
         $tokens        = array_chunk($push->getDevices()->getTokens(), 100);
 
         foreach ($tokens as $tokensRange) {
@@ -72,14 +74,22 @@ class Gcm extends BaseAdapter
                 throw new PushException($e->getMessage());
             }
 
-            if ((bool) $this->response->getSuccessCount()) {
-                foreach ($tokensRange as $token) {
+            $results = $this->response->getResults();
+
+            foreach ($results as $token => $result) {
+                if(array_key_exists('message_id', $result)) {
                     $pushedDevices->add($push->getDevices()->get($token));
+                } else {
+                    $failedDevices->add($push->getDevices()->get($token));
                 }
             }
+
         }
 
-        return $pushedDevices;
+        return [
+            'succeeded' => $pushedDevices,
+            'failed' => $failedDevices
+        ];
     }
 
     /**
