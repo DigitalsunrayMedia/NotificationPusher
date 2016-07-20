@@ -88,10 +88,9 @@ class Apns extends BaseAdapter
                 ServiceResponse::RESULT_INVALID_TOKEN_SIZE === $responseCode
             ) {
                 $failedDevices->add($device);
-                $client = $this->resetServiceClient();
-            } else {
-                $client = $this->resetServiceClient();
             }
+
+            $client = $this->resetServiceClient();
 
         }
 
