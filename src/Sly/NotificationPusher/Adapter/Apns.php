@@ -25,6 +25,7 @@ use ZendService\Apple\Apns\Message\Alert as ServiceAlert;
 use ZendService\Apple\Apns\Response\Message as ServiceResponse;
 use ZendService\Apple\Apns\Exception\RuntimeException as ServiceRuntimeException;
 use ZendService\Apple\Apns\Client\Feedback as ServiceFeedbackClient;
+use ZendService\Apple\Apns\Response\Message;
 
 /**
  * APNS adapter.
@@ -41,6 +42,9 @@ class Apns extends BaseAdapter
 
     /** @var ServiceFeedbackClient */
     private $feedbackClient;
+
+    /** @var string[] */
+    private $trace = [];
 
     /**
      * {@inheritdoc}
@@ -81,22 +85,28 @@ class Apns extends BaseAdapter
 
             $responseCode = $this->response->getCode();
 
+            $token = $device->getToken();
+            $this->trace[] = "APNS: Got $responseCode for token $token";
             if (ServiceResponse::RESULT_OK === $responseCode) {
+                $this->trace[] = "APNS: Adding $token to successful pushes";
                 $pushedDevices->add($device);
             } else if (
                 ServiceResponse::RESULT_INVALID_TOKEN === $responseCode ||
                 ServiceResponse::RESULT_INVALID_TOKEN_SIZE === $responseCode
             ) {
+                $this->trace[] = "APNS: Adding $token to unsuccessful pushes";
                 $failedDevices->add($device);
             }
 
+            $this->trace[] = "CLIENT RESET";
             $client = $this->resetServiceClient();
 
         }
 
         return [
             'succeeded' => $pushedDevices,
-            'failed' => $failedDevices
+            'failed' => $failedDevices,
+            'trace' => $this->trace
         ];
     }
 

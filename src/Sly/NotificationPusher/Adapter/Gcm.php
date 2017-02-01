@@ -88,7 +88,8 @@ class Gcm extends BaseAdapter
 
         return [
             'succeeded' => $pushedDevices,
-            'failed' => $failedDevices
+            'failed' => $failedDevices,
+            'trace' => []
         ];
     }
 
